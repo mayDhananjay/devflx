@@ -1,11 +1,5 @@
-import React from 'react'
+import { HeroSection } from "@/modules/home";
 
-const page = () => {
-  return (
-    <div>
-      home page
-    </div>
-  )
+export default function HomePage() {
+  return <HeroSection />;
 }
-
-export default page

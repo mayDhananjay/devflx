@@ -3,7 +3,6 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "@/lib/db";
 import authConfig from "@/auth.config";
 import { getUserById, getAccountByUserId } from "@/modules/auth/actions";
-import { UserRole } from "@prisma/client";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
@@ -22,16 +21,13 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       });
 
       if (!existingUser) {
-        // User will be created by the adapter
         return true;
       }
 
-      // Check if account is already linked
       if (account) {
         const existingAccount = await getAccountByUserId(existingUser.id);
 
         if (!existingAccount) {
-          // Link the account to existing user
           await db.account.create({
             data: {
               userId: existingUser.id,
@@ -63,6 +59,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       token.role = existingUser.role;
       token.email = existingUser.email;
       token.name = existingUser.name;
+      token.image = existingUser.image;
 
       return token;
     },
@@ -72,7 +69,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       }
 
       if (token.role && session.user) {
-        session.user.role = token.role as UserRole;
+        session.user.role = token.role as "USER" | "ADMIN";
+      }
+
+      if (token.image && session.user) {
+        session.user.image = token.image as string;
       }
 
       return session;

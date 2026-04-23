@@ -8,103 +8,62 @@ datasource db {
 }
 
 enum UserRole {
-  ADMIN
   USER
-  PREMIUM_USER
-}
-
-enum Templates {
-  REACT
-  NEXTJS
-  EXPRESS
-  VUE
-  HONO
-  ANGULAR
+  ADMIN
 }
 
 model User {
-  id            String    @id @default(cuid()) @map("_id")
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
   name          String?
   email         String?   @unique
   emailVerified DateTime?
   image         String?
   role          UserRole  @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
 
-  accounts     Account[]
-  playgrounds  Playground[]
-  starMarks    StarMark[]
-  chatMessages ChatMessage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Account {
-  id                String  @id @default(cuid()) @map("_id")
-  userId            String
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.String
+  access_token      String? @db.String
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
+  id_token          String? @db.String
   session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
 
-model Playground {
-  id          String    @id @default(cuid()) @map("_id")
-  name        String
-  description String?
-  template    Templates
-  userId      String
-  isPublic    Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  templateFiles TemplateFile[]
-  starMarks     StarMark[]
-  chatMessages  ChatMessage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model StarMark {
-  id           String   @id @default(cuid()) @map("_id")
-  userId       String
-  playgroundId String
-  createdAt    DateTime @default(now())
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String
+  expires    DateTime
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  playground Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, playgroundId])
-}
-
-model TemplateFile {
-  id           String   @id @default(cuid()) @map("_id")
-  name         String
-  content      String
-  path         String
-  playgroundId String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  playground Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
-}
-
-model ChatMessage {
-  id           String   @id @default(cuid()) @map("_id")
-  content      String
-  role         String
-  userId       String
-  playgroundId String
-  createdAt    DateTime @default(now())
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  playground Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+  @@unique([identifier, token])
 }

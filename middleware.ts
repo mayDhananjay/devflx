@@ -17,12 +17,10 @@ export default auth((req) => {
   const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
 
-  // Allow API auth routes
   if (isApiAuthRoute) {
     return;
   }
 
-  // Handle auth routes (sign-in, etc.)
   if (isAuthRoute) {
     if (isLoggedIn) {
       return Response.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl));
@@ -30,12 +28,10 @@ export default auth((req) => {
     return;
   }
 
-  // Allow public routes
   if (isPublicRoute) {
     return;
   }
 
-  // Redirect unauthenticated users to sign-in
   if (!isLoggedIn) {
     return Response.redirect(new URL("/auth/sign-in", nextUrl));
   }
