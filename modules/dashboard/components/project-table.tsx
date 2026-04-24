@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   MoreHorizontal,
   Edit3,
@@ -62,7 +63,7 @@ interface ProjectTableProps {
     data: { title: string; description: string }
   ) => Promise<void>;
   onDeleteProject?: (id: string) => Promise<void>;
-  onDuplicateProject?: (id: string) => Promise<void>;
+  onDuplicateProject?: (id: string) => Promise<unknown>;
   
 }
 
@@ -86,6 +87,7 @@ export default function ProjectTable({
     description: "",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
  
 
   const handleEditClick = (project: Project) => {
@@ -111,6 +113,8 @@ export default function ProjectTable({
     try {
       await onUpdateProject(selectedProject.id, editData);
       setEditDialogOpen(false);
+      setSelectedProject(null);
+      router.refresh();
       toast.success("Project updated successfully");
     } catch (error) {
       toast.error("Failed to update project");
@@ -132,6 +136,7 @@ export default function ProjectTable({
       await onDeleteProject(selectedProject.id);
       setDeleteDialogOpen(false);
       setSelectedProject(null);
+      router.refresh();
       toast.success("Project deleted successfully");
     } catch (error) {
       toast.error("Failed to delete project");
@@ -147,6 +152,7 @@ export default function ProjectTable({
     setIsLoading(true);
     try {
       await onDuplicateProject(project.id);
+      router.refresh();
       toast.success("Project duplicated successfully");
     } catch (error) {
       toast.error("Failed to duplicate project");
@@ -209,7 +215,7 @@ export default function ProjectTable({
                     <div className="w-8 h-8 rounded-full overflow-hidden">
                       <Image
                         src={project.user.image || "/placeholder.svg"}
-                        alt={project.user.name}
+                        alt={project.user.name ?? "User avatar"}
                         width={32}
                         height={32}
                         className="object-cover"
@@ -228,7 +234,10 @@ export default function ProjectTable({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem asChild>
-                        <MarkedToggleButton markedForRevision={project.Starmark[0]?.isMarked} id={project.id} />
+                        <MarkedToggleButton
+                          markedForRevision={project.starMarks?.[0]?.isMarked ?? false}
+                          id={project.id}
+                        />
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link

@@ -2,7 +2,12 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "@/lib/db";
 import authConfig from "@/auth.config";
-import { getUserById, getAccountByUserId } from "@/modules/auth/actions";
+import {
+  getUserById,
+  getUserByEmail,
+} from "@/modules/auth/actions";
+
+const isValidObjectId = (id: string) => /^[a-fA-F0-9]{24}$/.test(id);
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
@@ -25,7 +30,14 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       }
 
       if (account) {
-        const existingAccount = await getAccountByUserId(existingUser.id);
+        const existingAccount = await db.account.findUnique({
+          where: {
+            provider_providerAccountId: {
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+            },
+          },
+        });
 
         if (!existingAccount) {
           await db.account.create({
@@ -34,13 +46,13 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
               type: account.type,
               provider: account.provider,
               providerAccountId: account.providerAccountId,
-              refresh_token: account.refresh_token,
-              access_token: account.access_token,
-              expires_at: account.expires_at,
-              token_type: account.token_type,
+              refreshToken: account.refresh_token,
+              accessToken: account.access_token,
+              expiresAt: account.expires_at,
+              tokenType: account.token_type,
               scope: account.scope,
-              id_token: account.id_token,
-              session_state: account.session_state as string | undefined,
+              idToken: account.id_token,
+              sessionState: account.session_state as string | undefined,
             },
           });
         }
@@ -48,10 +60,19 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
       return true;
     },
-    async jwt({ token }) {
-      if (!token.sub) return token;
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.id = user.id;
+      }
 
-      const existingUser = await getUserById(token.sub);
+      const lookupId = token.id;
+
+      let existingUser = null;
+      if (lookupId && isValidObjectId(lookupId)) {
+        existingUser = await getUserById(lookupId);
+      } else if (token.email) {
+        existingUser = await getUserByEmail(token.email);
+      }
 
       if (!existingUser) return token;
 
@@ -64,8 +85,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      if (token.sub && session.user) {
-        session.user.id = token.sub;
+      if (session.user) {
+        session.user.id = (token.id as string) || "";
+        session.user.email = (token.email as string) || session.user.email;
+        session.user.name = (token.name as string) || session.user.name;
       }
 
       if (token.role && session.user) {
